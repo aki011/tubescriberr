@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import "@tanstack/react-start";
 import { generateText, Output } from "ai";
-import { z } from "zod";
+import { generateObject } from "ai";
 import { YoutubeTranscript } from "youtube-transcript";
 import { createLovableAiGatewayProvider } from "@/lib/ai-gateway";
 
@@ -96,17 +96,13 @@ export const Route = createFileRoute("/api/summarize")({
 
         const gateway = createLovableAiGatewayProvider(apiKey);
         const model = gateway("google/gemini-3-flash-preview");
-
-        try {
-          const { output } = await generateText({
+          const { object } = await generateObject({
             model,
-            output: Output.object({
-              schema: z.object({
-                shortSummary: z.string().describe("3-4 line concise summary"),
-                detailedSummary: z.string().describe("comprehensive multi-paragraph summary"),
-                bulletPoints: z.array(z.string()).min(3).max(12),
-                actionableInsights: z.array(z.string()).min(3).max(10),
-              }),
+            schema: z.object({
+              shortSummary: z.string().describe("3-4 line concise summary"),
+              detailedSummary: z.string().describe("comprehensive multi-paragraph summary"),
+              bulletPoints: z.array(z.string()).min(3).max(12),
+              actionableInsights: z.array(z.string()).min(3).max(10),
             }),
             prompt: `Analyze the following YouTube transcript and provide:
 1. Short Summary (3-4 lines)
@@ -116,6 +112,13 @@ export const Route = createFileRoute("/api/summarize")({
 
 ${truncated ? "(NOTE: transcript was truncated to fit token limits)\n" : ""}TRANSCRIPT:
 ${transcriptForModel}`,
+          });
+
+          return Response.json({
+            videoId,
+            meta,
+            truncated,
+            ...object,
           });
 
           return Response.json({
