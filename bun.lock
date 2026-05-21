@@ -59,6 +59,7 @@
         "tw-animate-css": "^1.3.4",
         "vaul": "^1.1.2",
         "vite-tsconfig-paths": "^6.0.2",
+        "youtube-captions-api": "^1.0.1",
         "youtube-transcript": "^1.3.1",
         "zod": "^4.4.3",
       },
@@ -1230,6 +1231,8 @@
     "youch": ["youch@4.1.0-beta.10", "", { "dependencies": { "@poppinss/colors": "^4.1.5", "@poppinss/dumper": "^0.6.4", "@speed-highlight/core": "^1.2.7", "cookie": "^1.0.2", "youch-core": "^0.3.3" } }, "sha512-rLfVLB4FgQneDr0dv1oddCVZmKjcJ6yX6mS4pU82Mq/Dt9a3cLZQ62pDBL4AUO+uVrCvtWz3ZFUL2HFAFJ/BXQ=="],
 
     "youch-core": ["youch-core@0.3.3", "", { "dependencies": { "@poppinss/exception": "^1.2.2", "error-stack-parser-es": "^1.0.5" } }, "sha512-ho7XuGjLaJ2hWHoK8yFnsUGy2Y5uDpqSTq1FkHLK4/oqKtyUU1AFbOOxY4IpC9f0fTLjwYbslUz0Po5BpD1wrA=="],
+
+    "youtube-captions-api": ["youtube-captions-api@1.0.1", "https://europe-west1-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/youtube-captions-api/-/youtube-captions-api-1.0.1.tgz", { "dependencies": { "undici": "^7.16.0" } }, "sha512-HOd6n+HLOn26hagn4SBL34+1XoEVMouzN96k9HPlIydj241//l7GgDv3r2BAoFUNpohvLzbqe0QvObbRRGyyNQ=="],
 
     "youtube-transcript": ["youtube-transcript@1.3.1", "https://europe-west4-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/youtube-transcript/-/youtube-transcript-1.3.1.tgz", {}, "sha512-NDCjwad113TGybbYF51y9Z4tcwzBHUZWQdF9veULNca18L+FdDbHHtTHIr69WVa3bB90l67S8kN0HtL2JO9fhg=="],
 
