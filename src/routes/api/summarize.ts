@@ -38,6 +38,92 @@ async function fetchVideoMeta(videoId: string) {
   };
 }
 
+function cleanTranscript(text: string) {
+  return text
+    .replace(/\s+/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&#39;|&apos;/g, "'")
+    .replace(/&quot;/g, '"')
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .trim();
+}
+
+function extractTranscriptText(payload: unknown): string {
+  if (typeof payload === "string") return payload;
+  if (Array.isArray(payload)) return payload.map(extractTranscriptText).filter(Boolean).join(" ");
+  if (!payload || typeof payload !== "object") return "";
+
+  const record = payload as Record<string, unknown>;
+  if (typeof record.text === "string") return record.text;
+  if (typeof record.transcript === "string") return record.transcript;
+  if (Array.isArray(record.transcript)) return extractTranscriptText(record.transcript);
+  if (Array.isArray(record.snippets)) return extractTranscriptText(record.snippets);
+  if (Array.isArray(record.success)) return extractTranscriptText(record.success[0]);
+  return "";
+}
+
+function randomHex(length: number) {
+  return Array.from({ length }, () => Math.floor(Math.random() * 16).toString(16)).join("");
+}
+
+async function fetchTranscriptFromFallback(videoId: string) {
+  // Public Firebase browser key used by youtube-transcript.io for anonymous auth.
+  const publicFirebaseKey = "AIzaSyC02AJ8YNuHAUKTf8e8u8orfZwTrLmqBeo";
+  const authRes = await fetch(
+    `https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${publicFirebaseKey}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ returnSecureToken: true }),
+    },
+  );
+  if (!authRes.ok) throw new Error(`Fallback auth failed: ${authRes.status}`);
+
+  const auth = (await authRes.json()) as { idToken?: string };
+  if (!auth.idToken) throw new Error("Fallback auth token missing");
+
+  const transcriptRes = await fetch("https://www.youtube-transcript.io/api/transcripts/v2", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${auth.idToken}`,
+      "x-request-channel": "9527-c",
+      "X-Hash": randomHex(64),
+    },
+    body: JSON.stringify({ ids: [videoId], source: "video" }),
+  });
+  if (!transcriptRes.ok) throw new Error(`Fallback transcript failed: ${transcriptRes.status}`);
+
+  const payload = await transcriptRes.json();
+  const text = cleanTranscript(extractTranscriptText(payload));
+  if (!text || text.toLowerCase().includes("youtube is currently blocking")) {
+    throw new Error("Fallback transcript was empty");
+  }
+  return text;
+}
+
+async function fetchTranscript(videoId: string) {
+  const errors: string[] = [];
+
+  try {
+    const items = await YoutubeTranscript.fetchTranscript(videoId);
+    const text = cleanTranscript(items.map((i) => i.text).join(" "));
+    if (text) return text;
+  } catch (err) {
+    errors.push(err instanceof Error ? err.message : String(err));
+  }
+
+  try {
+    return await fetchTranscriptFromFallback(videoId);
+  } catch (err) {
+    errors.push(err instanceof Error ? err.message : String(err));
+  }
+
+  console.warn("Transcript extraction failed:", errors);
+  throw new Error("Transcript not available for this video");
+}
+
 export const Route = createFileRoute("/api/summarize")({
   server: {
     handlers: {
@@ -51,8 +137,7 @@ export const Route = createFileRoute("/api/summarize")({
         // 1. Fetch transcript
         let transcript = "";
         try {
-          const items = await YoutubeTranscript.fetchTranscript(videoId);
-          transcript = items.map((i) => i.text).join(" ").replace(/\s+/g, " ").trim();
+          transcript = await fetchTranscript(videoId);
         } catch (err) {
           const msg = err instanceof Error ? err.message.toLowerCase() : "";
           if (msg.includes("disabled") || msg.includes("transcript")) {
