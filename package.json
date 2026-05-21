@@ -66,7 +66,9 @@
     "tw-animate-css": "^1.3.4",
     "vaul": "^1.1.2",
     "vite-tsconfig-paths": "^6.0.2",
+    "youtube-captions-api": "^1.0.1",
     "youtube-transcript": "^1.3.1",
+    "youtube-transcript-api": "^3.0.6",
     "zod": "^4.4.3"
   },
   "devDependencies": {
