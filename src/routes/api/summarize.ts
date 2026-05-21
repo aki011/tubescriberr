@@ -96,6 +96,8 @@ export const Route = createFileRoute("/api/summarize")({
 
         const gateway = createLovableAiGatewayProvider(apiKey);
         const model = gateway("google/gemini-3-flash-preview");
+
+        try {
           const { object } = await generateObject({
             model,
             schema: z.object({
