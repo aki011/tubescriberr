@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import "@tanstack/react-start";
-import { generateText, Output } from "ai";
 import { generateObject } from "ai";
+import { z } from "zod";
 import { YoutubeTranscript } from "youtube-transcript";
 import { createLovableAiGatewayProvider } from "@/lib/ai-gateway";
 
