@@ -1,8 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import "@tanstack/react-start";
-import { generateText } from "ai";
 import { YoutubeTranscript } from "youtube-transcript";
-import { createLovableAiGatewayProvider } from "@/lib/ai-gateway";
 
 // Extract YouTube video id from many URL shapes (watch, youtu.be, shorts, embed)
 function extractVideoId(url: string): string | null {
@@ -140,6 +138,46 @@ async function fetchTranscript(videoId: string) {
   throw new Error("Transcript not available for this video");
 }
 
+async function generateSummary(apiKey: string, transcriptForModel: string, truncated: boolean) {
+  const prompt = `Return ONLY valid JSON with this exact shape:
+{
+  "shortSummary": "3-4 concise lines",
+  "detailedSummary": "multi-paragraph detailed summary",
+  "bulletPoints": ["5-10 key points"],
+  "actionableInsights": ["3-7 practical takeaways"]
+}
+
+Analyze this YouTube transcript for a business analyst audience.
+
+${truncated ? "(NOTE: transcript was truncated to fit token limits)\n" : ""}TRANSCRIPT:
+${transcriptForModel}`;
+
+  const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Lovable-API-Key": apiKey,
+      "X-Lovable-AIG-SDK": "direct-fetch",
+    },
+    body: JSON.stringify({
+      model: "google/gemini-3-flash-preview",
+      messages: [{ role: "user", content: prompt }],
+      temperature: 0.2,
+    }),
+  });
+
+  if (!res.ok) {
+    const error = new Error(`AI gateway failed: ${res.status}`) as Error & { statusCode?: number };
+    error.statusCode = res.status;
+    throw error;
+  }
+
+  const data = (await res.json()) as { choices?: Array<{ message?: { content?: string } }> };
+  const text = data.choices?.[0]?.message?.content;
+  if (!text) throw new Error("AI gateway returned an empty response");
+  return parseSummaryJson(text);
+}
+
 export const Route = createFileRoute("/api/summarize")({
   server: {
     handlers: {
@@ -195,26 +233,8 @@ export const Route = createFileRoute("/api/summarize")({
           return Response.json({ error: "AI service temporarily unavailable" }, { status: 503 });
         }
 
-        const gateway = createLovableAiGatewayProvider(apiKey);
-        const model = gateway("google/gemini-3-flash-preview");
-
         try {
-          const { text } = await generateText({
-            model,
-            prompt: `Return ONLY valid JSON with this exact shape:
-{
-  "shortSummary": "3-4 concise lines",
-  "detailedSummary": "multi-paragraph detailed summary",
-  "bulletPoints": ["5-10 key points"],
-  "actionableInsights": ["3-7 practical takeaways"]
-}
-
-Analyze this YouTube transcript for a business analyst audience.
-
-${truncated ? "(NOTE: transcript was truncated to fit token limits)\n" : ""}TRANSCRIPT:
-${transcriptForModel}`,
-          });
-          const summary = parseSummaryJson(text);
+          const summary = await generateSummary(apiKey, transcriptForModel, truncated);
 
           return Response.json({
             videoId,
