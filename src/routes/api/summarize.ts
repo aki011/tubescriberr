@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import "@tanstack/react-start";
-import { generateText, Output } from "ai";
+import { generateObject } from "ai";
 import { z } from "zod";
 import { YoutubeTranscript } from "youtube-transcript";
 import { createLovableAiGatewayProvider } from "@/lib/ai-gateway";
@@ -98,15 +98,13 @@ export const Route = createFileRoute("/api/summarize")({
         const model = gateway("google/gemini-3-flash-preview");
 
         try {
-          const { output } = await generateText({
+          const { object } = await generateObject({
             model,
-            output: Output.object({
-              schema: z.object({
-                shortSummary: z.string().describe("3-4 line concise summary"),
-                detailedSummary: z.string().describe("comprehensive multi-paragraph summary"),
-                bulletPoints: z.array(z.string()).min(3).max(12),
-                actionableInsights: z.array(z.string()).min(3).max(10),
-              }),
+            schema: z.object({
+              shortSummary: z.string().describe("3-4 line concise summary"),
+              detailedSummary: z.string().describe("comprehensive multi-paragraph summary"),
+              bulletPoints: z.array(z.string()).min(3).max(12),
+              actionableInsights: z.array(z.string()).min(3).max(10),
             }),
             prompt: `Analyze the following YouTube transcript and provide:
 1. Short Summary (3-4 lines)
@@ -122,7 +120,7 @@ ${transcriptForModel}`,
             videoId,
             meta,
             truncated,
-            ...output,
+            ...object,
           });
         } catch (err) {
           const status = (err as { statusCode?: number })?.statusCode;
