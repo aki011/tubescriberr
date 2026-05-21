@@ -120,13 +120,6 @@ ${transcriptForModel}`,
             truncated,
             ...object,
           });
-
-          return Response.json({
-            videoId,
-            meta,
-            truncated,
-            ...output,
-          });
         } catch (err) {
           const status = (err as { statusCode?: number })?.statusCode;
           if (status === 429) {
