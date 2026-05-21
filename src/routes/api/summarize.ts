@@ -1,7 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import "@tanstack/react-start";
-import { generateText, Output } from "ai";
-import { z } from "zod";
+import { generateText } from "ai";
 import { YoutubeTranscript } from "youtube-transcript";
 import { createLovableAiGatewayProvider } from "@/lib/ai-gateway";
 
@@ -61,6 +60,23 @@ function extractTranscriptText(payload: unknown): string {
   if (Array.isArray(record.snippets)) return extractTranscriptText(record.snippets);
   if (Array.isArray(record.success)) return extractTranscriptText(record.success[0]);
   return "";
+}
+
+function parseSummaryJson(text: string) {
+  const jsonText = text.match(/```json\s*([\s\S]*?)```/i)?.[1] ?? text.match(/\{[\s\S]*\}/)?.[0] ?? text;
+  const parsed = JSON.parse(jsonText) as Partial<{
+    shortSummary: string;
+    detailedSummary: string;
+    bulletPoints: string[];
+    actionableInsights: string[];
+  }>;
+
+  return {
+    shortSummary: parsed.shortSummary || "Summary unavailable.",
+    detailedSummary: parsed.detailedSummary || parsed.shortSummary || "Detailed summary unavailable.",
+    bulletPoints: Array.isArray(parsed.bulletPoints) ? parsed.bulletPoints : [],
+    actionableInsights: Array.isArray(parsed.actionableInsights) ? parsed.actionableInsights : [],
+  };
 }
 
 function randomHex(length: number) {
@@ -183,31 +199,28 @@ export const Route = createFileRoute("/api/summarize")({
         const model = gateway("google/gemini-3-flash-preview");
 
         try {
-          const { experimental_output: object } = await generateText({
+          const { text } = await generateText({
             model,
-            experimental_output: Output.object({
-              schema: z.object({
-                shortSummary: z.string().describe("3-4 line concise summary"),
-                detailedSummary: z.string().describe("comprehensive multi-paragraph summary"),
-                bulletPoints: z.array(z.string()).min(3).max(12),
-                actionableInsights: z.array(z.string()).min(3).max(10),
-              }),
-            }),
-            prompt: `Analyze the following YouTube transcript and provide:
-1. Short Summary (3-4 lines)
-2. Detailed Summary (multi-paragraph, thorough)
-3. Key Bullet Points (5-10 items)
-4. Actionable Insights / Key Takeaways (3-7 practical takeaways)
+            prompt: `Return ONLY valid JSON with this exact shape:
+{
+  "shortSummary": "3-4 concise lines",
+  "detailedSummary": "multi-paragraph detailed summary",
+  "bulletPoints": ["5-10 key points"],
+  "actionableInsights": ["3-7 practical takeaways"]
+}
+
+Analyze this YouTube transcript for a business analyst audience.
 
 ${truncated ? "(NOTE: transcript was truncated to fit token limits)\n" : ""}TRANSCRIPT:
 ${transcriptForModel}`,
           });
+          const summary = parseSummaryJson(text);
 
           return Response.json({
             videoId,
             meta,
             truncated,
-            ...object,
+            ...summary,
           });
         } catch (err) {
           const status = (err as { statusCode?: number })?.statusCode;
