@@ -184,3 +184,4 @@ youtube-summarizer/
 ## 📜 License
 
 MIT — free for personal and commercial use. Built with ❤️ on [Lovable](https://lovable.dev).
+ 
