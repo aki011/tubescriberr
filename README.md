@@ -6,6 +6,8 @@ Built for analysts, students, researchers, and anyone who watches more videos th
 
 ![Tubescribe AI — Home](docs/images/hero.png)
 
+![Tubescribe AI — Summary result](docs/images/result.png)
+
 🔗 **Live demo:** https://tubescriberr.lovable.app
 
 ---
